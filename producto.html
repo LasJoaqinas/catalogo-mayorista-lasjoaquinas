@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vista de Producto — Las Joaquinas</title>
+  <link rel="icon" type="image/x-icon" href="https://i.ibb.co/S4CsRCL9/LOGO-JQNA.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { background: var(--bg); }
+    .lookbook-container { max-width: 800px; margin: 0 auto; padding: 20px 16px 40px; }
+    .back-to-catalog { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); font-weight: 600; font-size: 14px; margin-bottom: 20px; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; transition: all 0.2s; }
+    .back-to-catalog:hover { background: var(--accent-light); }
+    .product-header-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 24px; text-align: center; }
+    .product-header-card h1 { font-family: 'Bodoni Moda', serif; font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .product-header-card .sku { font-size: 13px; color: var(--muted); letter-spacing: 0.5px; }
+    .product-header-card .price { font-size: 22px; font-weight: 800; color: var(--accent); margin-top: 10px; }
+    
+    .gallery-title { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+    .gallery-grid { display: flex; flex-direction: column; gap: 16px; }
+    .gallery-item { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+    .gallery-item img { width: 100%; height: auto; display: block; object-fit: cover; }
+    
+    .variants-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-top: 24px; }
+    .variants-title { font-size: 14px; font-weight: 700; color: var(--text); text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .variants-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .variant-chip { background: var(--accent-light); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+    .variant-chip.no-stock { opacity: 0.5; text-decoration: line-through; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">
+      <img src="https://i.ibb.co/S4CsRCL9/LOGO-JQNA.png" alt="Las Joaquinas" class="logo-img" />
+      <span>Las Joaquinas</span>
+    </a>
+  </div>
+</header>
+
+<main class="lookbook-container">
+  <a href="index.html" class="back-to-catalog">← Ver todo el catálogo mayorista</a>
+
+  <div id="loading-screen" class="loading-screen">
+    <div class="spinner-big"></div>
+    <p>Cargando fotos del producto...</p>
+  </div>
+
+  <div id="product-content" style="display:none;">
+    <div class="product-header-card">
+      <h1 id="p-name"></h1>
+      <div class="sku" id="p-sku"></div>
+      <div class="price" id="p-price"></div>
+    </div>
+
+    <div class="gallery-title">📷 Galería / Fotos de la prenda</div>
+    <div class="gallery-grid" id="p-gallery"></div>
+
+    <div class="variants-card" id="p-variants-card">
+      <div class="variants-title">Talles y Colores Disponibles</div>
+      <div class="variants-list" id="p-variants-list"></div>
+    </div>
+  </div>
+
+  <div id="empty-state" class="empty-state" style="display:none;">
+    <div class="emoji">🔍</div>
+    <p>No se encontró el producto solicitado.</p>
+  </div>
+</main>
+
+<script>
+const BACKEND_URL = 'https://catalogo-lasjoaquinas-backend.onrender.com';
+
+function formatPrice(n) {
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const productId = urlParams.get('id');
+
+  if (!productId) {
+    showError();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/products/${productId}`);
+    const data = await res.json();
+
+    if (!data.ok || !data.product) {
+      showError();
+      return;
+    }
+
+    renderProduct(data.product);
+  } catch (err) {
+    console.error(err);
+    showError();
+  }
+});
+
+function showError() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'block';
+}
+
+function renderProduct(p) {
+  const name = p.name?.es || p.name || 'Sin nombre';
+  const firstVar = p.variants?.[0];
+  const price = firstVar?.price ? Math.round(firstVar.price * 0.8) : null;
+  const sku = firstVar?.sku ? `Art. ${firstVar.sku}` : `ID: ${p.id}`;
+
+  document.getElementById('p-name').textContent = name;
+  document.getElementById('p-sku').textContent = sku;
+  if (price) {
+    document.getElementById('p-price').textContent = formatPrice(price);
+  }
+
+  const images = p.images?.map(img => img.src).filter(Boolean) || [];
+  const galleryEl = document.getElementById('p-gallery');
+
+  if (images.length > 0) {
+    galleryEl.innerHTML = images.map((src, i) => `
+      <div class="gallery-item">
+        <img src="${src}" alt="${name} foto ${i+1}" loading="lazy" />
+      </div>
+    `).join('');
+  } else {
+    galleryEl.innerHTML = `<p style="color:var(--muted); text-align:center;">No hay fotos adicionales disponibles.</p>`;
+  }
+
+  const variantsListEl = document.getElementById('p-variants-list');
+  if (p.variants && p.variants.length > 0) {
+    variantsListEl.innerHTML = p.variants.map(v => {
+      const vals = v.values?.map(val => val.es || val) || [];
+      const label = vals.join(' / ') || 'Único';
+      const hasStock = (parseInt(v.stock) || 0) > 0;
+      return `<div class="variant-chip ${!hasStock ? 'no-stock' : ''}">${label} ${!hasStock ? '(Sin stock)' : ''}</div>`;
+    }).join('');
+  } else {
+    document.getElementById('p-variants-card').style.display = 'none';
+  }
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('product-content').style.display = 'block';
+}
+</script>
+</body>
+</html>
